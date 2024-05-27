@@ -5,10 +5,11 @@ namespace App\Controller;
 use App\Service\PropertyService;
 use App\Service\PropertyRelationService;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use App\DTO\CreateOrUpdateRequest;
 
 class PropertyController extends AbstractController
 {
@@ -31,12 +32,13 @@ class PropertyController extends AbstractController
         return $this->json($tree);
     }
 
-    #[Route('/api/properties', methods: ['POST'])]
-    public function addProperty(Request $request): JsonResponse
+    #[Route('/api/properties', methods: ['POST'], format: 'json')]
+    public function addProperty(
+        #[MapRequestPayload(acceptFormat: 'json', validationGroups: ['Default'], validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] 
+        CreateOrUpdateRequest $request
+    ): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-
-        $result = $this->propertyService->createOrUpdateProperty($data);
+        $result = $this->propertyService->createOrUpdateProperty($request);
         if (isset($result['error'])) {
             return $this->json(['error' => $result['error']], Response::HTTP_BAD_REQUEST);
         }
@@ -48,9 +50,9 @@ class PropertyController extends AbstractController
         if (count($errors) > 0) {
             return $this->json($errors, Response::HTTP_BAD_REQUEST);
         }
-
-        if (isset($data['parent_id'])) {
-            $parent = $this->propertyService->findActivePropertyById($data['parent_id']);
+        
+        if ($request->getParentId() !== null) {
+            $parent = $this->propertyService->findActivePropertyById($request->getParentId());
             if (!$parent) {
                 return $this->json(['error' => 'Parent property not found'], Response::HTTP_BAD_REQUEST);
             }

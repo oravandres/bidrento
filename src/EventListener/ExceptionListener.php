@@ -8,6 +8,11 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class ExceptionListener
 {
+    /**
+     * Handles kernel exceptions and converts them into JSON responses.
+     *
+     * @param ExceptionEvent $event The event containing the exception.
+     */
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();

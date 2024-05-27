@@ -47,6 +47,34 @@ class PropertyControllerTest extends WebTestCase
         $this->assertArrayHasKey('id', $building);
     }
 
+    public function testAddPropertyWithEmptyName()
+    {
+        $response = $this->createProperty([
+            'name' => '',
+            'type' => 'property'
+        ]);
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, self::$client->getResponse()->getStatusCode());
+
+        $responseContent = json_decode(self::$client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $responseContent);
+        $this->assertEquals('Name must be at least 1 characters long', $responseContent['error']);
+    }
+
+    public function testAddPropertyWithInvalidType()
+    {
+        $response = $this->createProperty([
+            'name' => 'Building',
+            'type' => 'invalid_type'
+        ]);
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, self::$client->getResponse()->getStatusCode());
+
+        $responseContent = json_decode(self::$client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $responseContent);
+        $this->assertEquals('Invalid property type: "invalid_type"', $responseContent['error']);
+    }
+
     public function testDeleteProperty()
     {
         $building = $this->createProperty([

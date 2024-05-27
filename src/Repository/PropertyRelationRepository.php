@@ -11,6 +11,9 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class PropertyRelationRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry The ManagerRegistry instance.
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, PropertyRelation::class);

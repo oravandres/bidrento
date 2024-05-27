@@ -75,6 +75,23 @@ class PropertyControllerTest extends WebTestCase
         $this->assertEquals('Invalid property type: "invalid_type"', $responseContent['error']);
     }
 
+    public function testAddPropertyWithNonExistentParentId()
+    {
+        $nonExistentParentId = 123456789; 
+
+        $response = $this->createProperty([
+            'name' => 'Building',
+            'type' => 'property',
+            'parent_id' => $nonExistentParentId
+        ]);
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, self::$client->getResponse()->getStatusCode());
+
+        $responseContent = json_decode(self::$client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $responseContent);
+        $this->assertEquals('Parent property not found', $responseContent['error']);
+    }
+
     public function testDeleteProperty()
     {
         $building = $this->createProperty([

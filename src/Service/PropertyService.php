@@ -15,6 +15,11 @@ class PropertyService
     private $entityManager;
     private $propertyRelationService;
 
+    /**
+     * @param PropertyRepository $propertyRepository The repository for property entities.
+     * @param EntityManagerInterface $entityManager The entity manager.
+     * @param PropertyRelationService $propertyRelationService The service for handling property relations.
+     */
     public function __construct(PropertyRepository $propertyRepository, EntityManagerInterface $entityManager, PropertyRelationService $propertyRelationService)
     {
         $this->propertyRepository = $propertyRepository;
@@ -22,28 +27,59 @@ class PropertyService
         $this->entityManager = $entityManager;
     }
 
+    /**
+     * Retrieves all active properties.
+     *
+     * @return Property[] An array of active properties.
+     */
     public function getAllActiveProperties(): array
     {
         return $this->propertyRepository->findBy(['status' => PropertyStatus::ACTIVE->value]);
     }
 
+    /**
+     * Saves a property to the database.
+     *
+     * @param Property $property The property to save.
+     */
     public function saveProperty(Property $property): void
     {
         $this->entityManager->persist($property);
         $this->entityManager->flush();
     }
 
+    /**
+     * Finds an active property by its ID.
+     *
+     * @param int $id The ID of the property.
+     * @return Property|null The found property or null if not found.
+     */
     public function findActivePropertyById($id): ?Property
     {
         return $this->propertyRepository->findOneBy(['id' => $id, 'status' => PropertyStatus::ACTIVE->value]);
     }
 
+    /**
+     * Soft deletes a property by setting its status to DELETED.
+     *
+     * @param Property $property The property to soft delete.
+     */
     public function softDeleteProperty(Property $property): void
     {
         $property->setStatus(PropertyStatus::DELETED);
         $this->entityManager->flush();
     }
 
+    /**
+     * Assembles property details including its parents, siblings, and children.
+     *
+     * @param Property $property The main property.
+     * @param Property[] $parents The parent properties.
+     * @param Property[] $siblings The sibling properties.
+     * @param Property[] $children The child properties.
+     * 
+     * @return array An array of property details with their relations.
+     */
     public function assemblePropertyDetails(Property $property, array $parents, array $siblings, array $children): array
     {
         $result = [];
@@ -76,6 +112,13 @@ class PropertyService
         return $result;
     }
 
+    /**
+     * Creates or updates a property.
+     *
+     * @param CreateOrUpdateRequest $data
+     * @return Property
+     * @throws \Exception
+     */
     public function createOrUpdateProperty(CreateOrUpdateRequest $data): Property
     {
         $type = PropertyType::fromString($data->getType());

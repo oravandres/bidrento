@@ -7,6 +7,9 @@ use App\Enum\PropertyStatus;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PropertyRepository;
 
+/**
+ * Represents a property entity.
+ */
 #[ORM\Entity(repositoryClass: PropertyRepository::class)]
 class Property
 {

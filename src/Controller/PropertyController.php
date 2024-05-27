@@ -11,17 +11,31 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use App\DTO\CreateOrUpdateRequest;
 
+/**
+ * Controller for managing properties.
+ */
 class PropertyController extends AbstractController
 {
     private $propertyService;
     private $propertyRelationService;
 
+    /**
+     * Constructor for PropertyController.
+     *
+     * @param PropertyService $propertyService The property service.
+     * @param PropertyRelationService $propertyRelationService The property relation service.
+     */
     public function __construct(PropertyService $propertyService, PropertyRelationService $propertyRelationService)
     {
         $this->propertyService = $propertyService;
         $this->propertyRelationService = $propertyRelationService;
     }
 
+    /**
+     * Retrieves all active properties and their relations.
+     *
+     * @return JsonResponse The response containing the property tree.
+     */
     #[Route('/api/properties', methods: ['GET'])]
     public function getProperties(): JsonResponse
     {
@@ -32,6 +46,12 @@ class PropertyController extends AbstractController
         return $this->json($tree);
     }
 
+    /**
+     * Adds a new property or updates an existing one.
+     *
+     * @param CreateOrUpdateRequest $request The request payload.
+     * @return JsonResponse The response containing the created or updated property.
+     */
     #[Route('/api/properties', methods: ['POST'], format: 'json')]
     public function addProperty(
         #[MapRequestPayload(acceptFormat: 'json', validationGroups: ['Default'], validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] 
@@ -40,7 +60,6 @@ class PropertyController extends AbstractController
     {
         try {
             $property = $this->propertyService->createOrUpdateProperty($request);
-            
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
@@ -48,6 +67,12 @@ class PropertyController extends AbstractController
         return $this->json($property, Response::HTTP_CREATED);
     }
 
+    /**
+     * Retrieves details of a specific property by its ID.
+     *
+     * @param int $id The ID of the property.
+     * @return JsonResponse The response containing the property details.
+     */
     #[Route('/api/properties/{id}', methods: ['GET'])]
     public function getProperty(int $id): JsonResponse
     {
@@ -65,6 +90,12 @@ class PropertyController extends AbstractController
         return $this->json($result);
     }
 
+    /**
+     * Deletes a specific property by its ID.
+     *
+     * @param int $id The ID of the property.
+     * @return JsonResponse The response confirming the deletion.
+     */
     #[Route('/api/properties/{id}', methods: ['DELETE'])]
     public function deleteProperty(int $id): JsonResponse
     {

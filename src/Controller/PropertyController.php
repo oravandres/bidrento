@@ -38,36 +38,12 @@ class PropertyController extends AbstractController
         CreateOrUpdateRequest $request
     ): JsonResponse
     {
-        $result = $this->propertyService->createOrUpdateProperty($request);
-        if (isset($result['error'])) {
-            return $this->json(['error' => $result['error']], Response::HTTP_BAD_REQUEST);
+        try {
+            $property = $this->propertyService->createOrUpdateProperty($request);
+            
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
-
-        $property = $result['property'];
-        $type = $result['type'];
-        $errors = $result['errors'];
-
-        if (count($errors) > 0) {
-            return $this->json($errors, Response::HTTP_BAD_REQUEST);
-        }
-        
-        if ($request->getParentId() !== null) {
-            $parent = $this->propertyService->findActivePropertyById($request->getParentId());
-            if (!$parent) {
-                return $this->json(['error' => 'Parent property not found'], Response::HTTP_BAD_REQUEST);
-            }
-
-            $relationErrors = $this->propertyRelationService->validateAndCreateRelation($property, $parent, $type);
-            if (isset($relationErrors['error'])) {
-                return $this->json(['error' => $relationErrors['error']], Response::HTTP_BAD_REQUEST);
-            }
-
-            if (count($relationErrors) > 0) {
-                return $this->json($relationErrors, Response::HTTP_BAD_REQUEST);
-            }
-        }
-
-        $this->propertyService->validateAndSaveProperty($property);
 
         return $this->json($property, Response::HTTP_CREATED);
     }

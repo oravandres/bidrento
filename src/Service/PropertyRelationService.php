@@ -14,13 +14,11 @@ class PropertyRelationService
 {
     private $propertyRelationRepository;
     private $entityManager;
-    private $validator;
 
     public function __construct(PropertyRelationRepository $propertyRelationRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator)
     {
         $this->propertyRelationRepository = $propertyRelationRepository;
         $this->entityManager = $entityManager;
-        $this->validator = $validator;
     }
 
     public function getAllActiveRelations(): array
@@ -28,21 +26,14 @@ class PropertyRelationService
         return $this->propertyRelationRepository->findBy(['status' => PropertyStatus::ACTIVE->value]);
     }
 
-    public function createRelation(Property $property, Property $parent): array
+    public function createRelation(Property $property, Property $parent): void
     {
         $relation = new PropertyRelation();
         $relation->setProperty($property);
         $relation->setParent($parent);
 
-        $errors = $this->validator->validate($relation);
-        if (count($errors) > 0) {
-            return $errors;
-        }
-
         $this->entityManager->persist($relation);
         $this->entityManager->flush();
-
-        return [];
     }
 
     public function softDeleteRelationsForProperty(Property $property): void
@@ -152,35 +143,29 @@ class PropertyRelationService
         return true;
     }
 
-    public function validateAndCreateRelation(Property $property, Property $parent, PropertyType $type): array
+    public function validateAndCreateRelation(Property $property, Property $parent, PropertyType $type): void
     {
-        $errors = $this->validateRelation($property, $parent, $type);
-        if (!empty($errors)) {
-            return $errors;
-        }
-
-        return $this->createRelation($property, $parent);
+        $this->validateRelation($property, $parent, $type);
+        $this->createRelation($property, $parent);
     }
 
-    private function validateRelation(Property $property, Property $parent, PropertyType $type): array
+    private function validateRelation(Property $property, Property $parent, PropertyType $type): void
     {
         // Check if a regular property already has a parent relation
         if ($type === PropertyType::PROPERTY && $this->propertyRelationRepository->findOneBy(['property' => $property, 'status' => PropertyStatus::ACTIVE->value])) {
-            return ['error' => 'A regular property cannot have multiple parents'];
+            throw new \Exception('A regular property cannot have multiple parents');
         }
 
         // Check if the relation already exists
         $existingRelation = $this->propertyRelationRepository->findOneBy(['property' => $property, 'parent' => $parent, 'status' => PropertyStatus::ACTIVE->value]);
         if ($existingRelation) {
-            return ['error' => 'This property relation already exists'];
+            throw new \Exception('This property relation already exists');
         }
 
         // Check if property is being added to itself
         if ($property->getId() === $parent->getId()) {
-            return ['error' => 'A property cannot be added to itself'];
+            throw new \Exception('A property cannot be added to itself');
         }
-
-        return [];
     }
 
     public function hasActiveChildren(Property $property): bool

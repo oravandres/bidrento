@@ -8,19 +8,18 @@ use App\Enum\PropertyStatus;
 use App\Enum\PropertyType;
 use App\Repository\PropertyRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class PropertyService
 {
     private $propertyRepository;
     private $entityManager;
-    private $validator;
+    private $propertyRelationService;
 
-    public function __construct(PropertyRepository $propertyRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator)
+    public function __construct(PropertyRepository $propertyRepository, EntityManagerInterface $entityManager, PropertyRelationService $propertyRelationService)
     {
         $this->propertyRepository = $propertyRepository;
+        $this->propertyRelationService = $propertyRelationService;
         $this->entityManager = $entityManager;
-        $this->validator = $validator;
     }
 
     public function getAllActiveProperties(): array
@@ -28,17 +27,10 @@ class PropertyService
         return $this->propertyRepository->findBy(['status' => PropertyStatus::ACTIVE->value]);
     }
 
-    public function validateAndSaveProperty(Property $property): array
+    public function saveProperty(Property $property): void
     {
-        $errors = $this->validator->validate($property);
-        if (count($errors) > 0) {
-            return $errors;
-        }
-
         $this->entityManager->persist($property);
         $this->entityManager->flush();
-
-        return [];
     }
 
     public function findActivePropertyById($id): ?Property
@@ -84,36 +76,32 @@ class PropertyService
         return $result;
     }
 
-    public function createOrUpdateProperty(CreateOrUpdateRequest $data): array
+    public function createOrUpdateProperty(CreateOrUpdateRequest $data): Property
     {
         $type = PropertyType::fromString($data->getType());
-        $propertyResult = $this->findOrCreateProperty($data->getName(), $type);
-        if (isset($propertyResult['error'])) {
-            return $propertyResult;
-        }
+        $property = $this->propertyRepository->findOneBy(['name' => $data->getName(), 'status' => PropertyStatus::ACTIVE->value]);
 
-        $property = $propertyResult['property'];
-        $errors = $this->validateAndSaveProperty($property);
-        if (!empty($errors)) {
-            return $errors;
-        }
-
-        return ['property' => $property, 'type' => $type, 'errors' => $errors];
-    }
-
-    private function findOrCreateProperty(string $name, PropertyType $type): array
-    {
-        $property = $this->propertyRepository->findOneBy(['name' => $name, 'status' => PropertyStatus::ACTIVE->value]);
         if (!$property) {
             $property = new Property();
-            $property->setName($name);
+            $property->setName($data->getName());
             $property->setType($type);
+
+            $this->saveProperty($property);
         } else {
             if ($type !== $property->getType()) {
-                return ['error' => 'Existing property type mismatch'];
+                throw new \Exception('Existing property type mismatch');
             }
         }
 
-        return ['property' => $property];
+        if ($data->getParentId() !== null) {
+            $parent = $this->findActivePropertyById($data->getParentId());
+            if (!$parent) {
+                throw new \Exception('Parent property not found');
+            }
+
+            $this->propertyRelationService->validateAndCreateRelation($property, $parent, $type);
+        }
+
+        return $property;
     }
 }

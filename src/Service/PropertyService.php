@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\DTO\CreateOrUpdateRequest;
 use App\Entity\Property;
 use App\Enum\PropertyStatus;
 use App\Enum\PropertyType;
@@ -83,23 +84,10 @@ class PropertyService
         return $result;
     }
 
-    public function createOrUpdateProperty(array $data): array
+    public function createOrUpdateProperty(CreateOrUpdateRequest $data): array
     {
-        if (!isset($data['name']) || strlen(trim($data['name'])) < 1) {
-            return ['error' => 'Property name is required and should be at least 1 character long'];
-        }
-
-        if (!isset($data['type'])) {
-            return ['error' => 'Property type is required'];
-        }
-
-        try {
-            $type = PropertyType::fromString($data['type']);
-        } catch (\InvalidArgumentException $e) {
-            return ['error' => 'Invalid property type'];
-        }
-
-        $propertyResult = $this->findOrCreateProperty($data['name'], $type);
+        $type = PropertyType::fromString($data->getType());
+        $propertyResult = $this->findOrCreateProperty($data->getName(), $type);
         if (isset($propertyResult['error'])) {
             return $propertyResult;
         }
